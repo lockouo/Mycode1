@@ -1,49 +1,61 @@
 import streamlit as st
-import time
+from openai import OpenAI
 
-# 设置页面基础配置
-st.set_page_config(page_title="品牌营销文案生成引擎", page_icon="📝", layout="centered")
-
-st.title("品牌营销文案生成引擎")
-st.markdown("输入产品基础信息，系统将自动生成具备专业策略视角的营销传播文案。此工具专为品牌前置营销策划研发。")
-st.divider() # 分割线
-
-# 核心输入区域
-product_name = st.text_input("产品名称", value="遂宁姜糕")
-target_audience = st.selectbox("目标客群画像", [
-    "注重文化底蕴与送礼品质的商务人士", 
-    "追求新中式与国潮体验的年轻群体", 
-    "关注健康与传统养生的中老年群体"
-])
-selling_points = st.text_area("核心商业卖点", value="百年非遗手工工艺，精选优质原产地老姜，结合现代极简视觉与环保模切包装设计。")
-
-# 生成按钮与逻辑
-if st.button("生成专业营销文案", type="primary"):
-    if not product_name or not selling_points:
-        st.warning("系统提示：请完整输入产品名称与核心商业卖点。")
-    else:
-        # 模拟 AI 模型思考过程（初期作为前端原型展示，此处使用模拟延迟）
-        with st.spinner("AI 正在深度解析产品特性与客群画像，构建策略逻辑..."):
-            time.sleep(2)
-            
-            # 模拟的 AI 输出结果（保持严肃专业的商业语境）
-            generated_copy = f"""
-#### 【核心传播策略】
-针对**{target_audience}**，本案旨在将“**{product_name}**”的传统文化基因与现代消费语境进行重构。通过强调其核心卖点，建立品牌信任度与高端定位。
-
-#### 【营销文案正文】
-在快节奏的现代商业环境中，寻回一份纯粹的文化底蕴。**{product_name}**不仅是味觉的传承，更是品牌理念的具象化表达。
-
-我们始终坚守：**{selling_points}**
-
-从严苛的原料甄选，到最终呈现于消费者面前的精细化包装物料，每一处细节皆是传统工艺与现代视觉设计的严谨交汇。用专业的品牌叙事，致敬不朽的匠心记忆。
-
-#### 【社交媒体分发标签】
-#{product_name} #新中式品牌升级 #非遗文化传承 #专业视觉企划
-            """
-            
-            st.success("策略文案生成完毕")
-            st.markdown(generated_copy)
-            
+# 一、 页面全局配置与UI排版
+st.set_page_config(page_title="AI 品牌营销文案生成引擎", layout="centered")
+st.title("AI 品牌营销文案生成引擎")
+st.markdown("### 专为广告策划与品牌营销设计的提效辅助系统 (Powered by DeepSeek)")
 st.divider()
-st.caption("注：当前版本为前端交互原型。实际生产环境中，此模块将接入大型语言模型 (LLM) API 以实现动态文本生成。")
+
+# 二、 侧边栏配置区
+st.sidebar.header("系统配置")
+st.sidebar.markdown("请在此输入您的 DeepSeek API Key 以激活引擎。")
+api_key = st.sidebar.text_input("DeepSeek API Key", type="password")
+
+# 三、 主操作区：输入产品营销参数
+st.subheader("一、 输入营销策略参数")
+# 这里的 value="遂宁姜糕" 只是默认显示文本，网页运行后可随意修改
+product_name = st.text_input("产品/项目名称", value="遂宁姜糕")
+selling_points = st.text_area("核心品牌卖点", value="百年非遗工艺，全新国潮包装设计，便携式独立小包装，口感软糯养生")
+target_audience = st.selectbox("核心目标受众群", ["年轻世代国潮爱好者", "注重健康养生的中老年群体", "具有伴手礼/节庆送礼需求的人群"])
+copy_style = st.selectbox("预设文案输出风格", ["小红书平台种草风（强网感/带Emoji）", "电商详情页转化风（重理性诉求与功能介绍）", "品牌公关新闻稿（严肃/企业视角）"])
+
+st.divider()
+
+# 四、 核心逻辑区：调用 DeepSeek 大模型
+st.subheader("二、 智能生成结果")
+if st.button("启动引擎，生成营销文案"):
+    if not api_key:
+        st.error("操作受阻：系统未检测到有效的 API Key，请先在左侧边栏完成配置。")
+    else:
+        try:
+            # 配置 DeepSeek 客户端
+            client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+            
+            # 构建专业级提示词 (Prompt)
+            prompt = f"""
+            产品名称：{product_name}
+            核心卖点：{selling_points}
+            目标受众：{target_audience}
+            文案风格：{copy_style}
+            
+            请严格按照上述设定的风格，撰写一段高质量的营销文案。字数控制在 300 - 400 字之间，要求排版清晰，具备直接落地的商业价值。
+            """
+
+            with st.spinner("DeepSeek 引擎正在进行语义构建与策略推演，请稍候..."):
+                # 调用 DeepSeek-Chat 模型
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": "你是一位资深广告文案与营销策划师。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7
+                )
+                
+                st.success("文案生成完毕：")
+                # 提取并展示最终文本
+                st.write(response.choices[0].message.content)
+                
+        except Exception as e:
+            st.error(f"引擎运行异常，请检查网络或 API Key 的有效性。系统报错信息：{e}")
